@@ -9,7 +9,7 @@ class PhotoExtractor():
     def extract_photos(self):  
         photos = []  
         for filename in os.listdir(self.filepath):  
-            if filename.startswith("view") and len(filename) == 8:  
+            if filename.startswith("view"):  
                 camera_number = int(filename[4:6])  
                 frame_num = int(filename[8:10])  
                 if frame_num == self.frame_number:  

@@ -27,14 +27,14 @@ from typing import Optional,Tuple,List,Union,Callable
 
 import cv2
 import numpy as np
-# import torch
-# from torch import nn
+import torch
+from torch import nn
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import axes3d
 # from tqdm import trange
 from photoextractor import PhotoExtractor
 
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 loaded_matrices = np.load('E:\\matrix\\matrices.npy')
 
@@ -86,3 +86,46 @@ ax.set_ylabel('Y')
 ax.set_zlabel('z')
 
 plt.show()
+
+def get_rays(
+        H:int,
+        W:int,
+        focal:float,
+        pose:torch.tensor) -> Tuple[torch.tensor, torch.tensor]:
+    #启用针孔相机收集每个像素的方向
+    x, y = torch.meshgrid(
+        torch.arange(W, dtype=torch.float32).to(pose),
+        torch.arange(H, dtype=torch.float32).to(pose),
+        indexing="xy"
+
+    x = x.transpose(-1, -2)
+    y = y.transpose(-1, -2)
+
+    directions = torch.stack([(x - W / 2) / focal, -(y - H / 2) / focal, -torch.ones_like(x)], dim=-1)
+
+    rays_d = directions @ pose[:3, :3].T
+    rays_d = torch.sum(directions[..., None, :] * pose[:3, :3], -1)
+
+    rays_o = pose[:3, -1].expand(rays_d.shape)
+
+    return rays_o, rays_d
+    )
+
+images = torch.from_numpy(images[:n_training]).to(device)
+poses = torch.from_numpy(poses[:n_training]).to(device)
+focal = torch.from_numpy(np.array([focal])).to(device)
+
+testimg = torch.from_numpy(images[testimg_idx]).to(device)
+testpose = torch.from_numpy(poses[testimg_idx]).to(device)
+
+H, W = images.shape[1:3]
+
+with torch.no_grad():
+    rays_o, rays_d = get_rays(H, W, focal, testpose)
+
+print("ray origin")
+
+print(rays_o.shape)
+
+print(rays_o[H//2, W//2, :])
+print("")

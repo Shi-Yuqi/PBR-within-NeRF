@@ -129,3 +129,9 @@ print(rays_o.shape)
 
 print(rays_o[H//2, W//2, :])
 print("")
+
+print("ray direction")
+
+print(rays_d.shape)
+print(rays_d[H//2, W//2, :])
+print("")

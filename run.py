@@ -10,13 +10,13 @@ use_viewdirs = True   # 如果设置，则使用视图方向作为输入
 n_freqs_views = 4     # 视图编码功能的数量
 
 # 采样策略
-n_samples = 64         # 每条射线的空间样本数
+n_samples = 64         # 每条射线 的空间样本数
 perturb = True         # 如果设置，则对采样位置应用噪声
 inverse_depth = False  # 如果设置，则按反深度线性采样点
 
 # 模型
 d_filter = 128          # 线性层滤波器的尺寸
-n_layers = 2            # bottleneck层数量
+n_layers = 2            # bottleneck层数量 
 skip = []               # 应用输入残差的层级
 use_fine_model = True   # 如果设置，则创建一个精细模型
 d_filter_fine = 128     # 精细网络线性层滤波器的尺寸

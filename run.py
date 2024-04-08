@@ -37,23 +37,26 @@ from photoextractor import PhotoExtractor
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 loaded_matrices = np.load('D:\\code\\data_PBR_within_NeRF\\matrix\\matrices.npy')
+# loaded_matrices = np.load('D:\\code\\data_PBR_within_NeRF\\matrix_trans\\matrices.npy')
 # loaded_matrices = np.load('E:\\matrix\\matrices.npy')
 
 path_photo = 'D:\\code\\data_PBR_within_NeRF\\within_texture'
 # path_photo = 'E:\\blender\\within_texture'
 data = PhotoExtractor(path_photo, 20)
-images = data.extract_photos()  # 图像数据
+images = np.array(data.extract_photos())  # 图像数据
 
 plt.imshow(images[0])  
 plt.show() 
 
 poses = loaded_matrices  # 位姿数据
-focal = 30  # 焦距数值
+focal = np.full(1, 30)  # 焦距数值
+
+print(f'Images shape: {images.shape}')
+print(f'Poses shape: {poses.shape}')
+print(f'Focal length: {focal}')
 
 height, width = (1080,1920)
 near, far = 2., 6.
-
-
 
 n_training = 30 # 训练数据数量
 testimg_idx = 31 # 测试数据下标
@@ -113,13 +116,15 @@ def get_rays(
 
     return rays_o, rays_d
     
-
-images = torch.from_numpy(images[:n_training]).to(device)
-poses = torch.from_numpy(poses[:n_training]).to(device)
-focal = torch.from_numpy(np.array([focal])).to(device)
-
 testimg = torch.from_numpy(images[testimg_idx]).to(device)
 testpose = torch.from_numpy(poses[testimg_idx]).to(device)
+
+images = torch.from_numpy(images[:n_training]).to(device)
+poses = torch.from_numpy(poses).to(device)
+focal = torch.from_numpy(focal).to(device)
+
+# testimg = torch.from_numpy(images[testimg_idx]).to(device)
+# testpose = torch.from_numpy(poses[testimg_idx]).to(device)
 
 H, W = images.shape[1:3]
 
@@ -127,7 +132,6 @@ with torch.no_grad():
     rays_o, rays_d = get_rays(H, W, focal, testpose)
 
 print("ray origin")
-
 print(rays_o.shape)
 
 print(rays_o[H//2, W//2, :])

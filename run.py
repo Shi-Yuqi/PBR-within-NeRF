@@ -142,3 +142,90 @@ print("ray direction")
 print(rays_d.shape)
 print(rays_d[H//2, W//2, :])
 print("")
+
+def sample_stratified(
+    rays_o: torch.Tensor,           #射线原点
+    rays_d: torch.Tensor,           #射线方向
+    near: float,
+    far: float,
+    N_samples: int,                 #采样数量
+    perturb: Optional[bool] = True, #扰动设置
+    inverse_depth: bool = False     #反向深度
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    
+    t_vals = torch.linspace(0.0, 1.0, N_samples, device=rays_o.device)
+
+    if not inverse_depth:
+        z_vals = near * (1.0 - t_vals) + far * t_vals #从远到近线性采样
+    else:
+        z_vals = 1.0 / (1.0 / near * (1.0 - t_vals) + 1.0 / far * t_vals) #反向深度采样
+
+    if perturb:
+        mids = 0.5 * (z_vals[1:] + z_vals[:-1])
+        upper = torch.concat((mids, z_vals[-1:]), dim=-1)
+        lower = torch.concat((z_vals[:1], mids), dim=-1)
+        t_rand = torch.rand([N_samples],device=z_vals.device)
+        z_vals = lower + (upper - lower) * t_rand
+    z_vals = z_vals.expand(list(rays_o.shape[:-1]) + [N_samples])
+
+    pts = rays_o[..., None, :] + rays_d[..., None, :] * z_vals[..., :, None]
+    return pts, z_vals
+
+#对采样点进行可视化分析
+# y_vals = torch.zeros_like(z_vals)
+# # 调用采样策略函数
+# _, z_vals_unperturbed = sample_stratified(rays_o, rays_d, near, far, N_samples,
+#                                   perturb=False, inverse_depth=inverse_depth)
+# # 绘图相关
+# plt.plot(z_vals_unperturbed[0].cpu().numpy(), 1 + y_vals[0].cpu().numpy(), 'b-o')
+# plt.plot(z_vals[0].cpu().numpy(), y_vals[0].cpu().numpy(), 'r-o')
+# plt.ylim([-1, 2])
+# plt.title('Stratified Sampling (blue) with Perturbation (red)')
+# ax = plt.gca()
+# ax.axes.yaxis.set_visible(False)
+# plt.grid(True)
+class PositionalEncoder(nn.Module):
+  """
+  对输入点做sine或者consine位置编码。
+  """
+  def __init__(
+    self,
+    d_input: int,
+    n_freqs: int,
+    log_space: bool = False
+  ):
+    super().__init__()
+    self.d_input = d_input
+    self.n_freqs = n_freqs
+    self.log_space = log_space
+    self.d_output = d_input * (1 + 2 * self.n_freqs)
+    self.embed_fns = [lambda x: x]
+
+    # 定义线性或者log尺度的频率
+    if self.log_space:
+      freq_bands = 2.**torch.linspace(0., self.n_freqs - 1, self.n_freqs)
+    else:
+      freq_bands = torch.linspace(2.**0., 2.**(self.n_freqs - 1), self.n_freqs)
+
+    # 替换sin和cos
+    for freq in freq_bands:
+      self.embed_fns.append(lambda x, freq=freq: torch.sin(x * freq))
+      self.embed_fns.append(lambda x, freq=freq: torch.cos(x * freq))
+  
+  def forward(
+    self,
+    x
+  ) -> torch.Tensor:
+    """
+    实际使用位置编码的函数。
+    """
+    return torch.concat([fn(x) for fn in self.embed_fns], dim=-1)
+  
+class NeRF(nn.Module):
+   def __init__(
+        self,
+        d_input: int,
+        n_layers
+        d_hidden: int = 256,
+        )
+      

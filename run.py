@@ -38,7 +38,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 loaded_matrices = np.load('E:\\matrix\\matrices.npy')
 
-path_photo = 'E:\\blender\\within_texture'
+path_photo = 'D:\\code\\data_PBR_within_NeRF\\within_texture'
+# path_photo = 'E:\\blender\\within_texture'
 data = PhotoExtractor(path_photo, 20)
 images = data.extract_photos()  # 图像数据
 
@@ -97,6 +98,7 @@ def get_rays(
         torch.arange(W, dtype=torch.float32).to(pose),
         torch.arange(H, dtype=torch.float32).to(pose),
         indexing="xy"
+    )
 
     x = x.transpose(-1, -2)
     y = y.transpose(-1, -2)
@@ -109,7 +111,7 @@ def get_rays(
     rays_o = pose[:3, -1].expand(rays_d.shape)
 
     return rays_o, rays_d
-    )
+    
 
 images = torch.from_numpy(images[:n_training]).to(device)
 poses = torch.from_numpy(poses[:n_training]).to(device)

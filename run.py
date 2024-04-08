@@ -221,11 +221,77 @@ class PositionalEncoder(nn.Module):
     """
     return torch.concat([fn(x) for fn in self.embed_fns], dim=-1)
   
+# 定义NeRF模型
 class NeRF(nn.Module):
-   def __init__(
-        self,
-        d_input: int,
-        n_layers
-        d_hidden: int = 256,
-        )
-      
+  """
+  神经辐射场模块。
+  """
+  def __init__(
+    self,
+    d_input: int = 3,
+    n_layers: int = 8,
+    d_filter: int = 256,
+    skip: Tuple[int] = (4,),
+    d_viewdirs: Optional[int] = None
+  ):
+    super().__init__()
+    self.d_input = d_input # 输入
+    self.skip = skip # 残差连接
+    self.act = nn.functional.relu # 激活函数
+    self.d_viewdirs = d_viewdirs # 视图方向
+
+    # 创建模型的层结构
+    self.layers = nn.ModuleList(
+      [nn.Linear(self.d_input, d_filter)] +
+      [nn.Linear(d_filter + self.d_input, d_filter) if i in skip \
+       else nn.Linear(d_filter, d_filter) for i in range(n_layers - 1)]
+    )
+
+    # Bottleneck 层
+    if self.d_viewdirs is not None:
+      # 如果使用视图方向，分离alpha和RGB
+      self.alpha_out = nn.Linear(d_filter, 1)
+      self.rgb_filters = nn.Linear(d_filter, d_filter)
+      self.branch = nn.Linear(d_filter + self.d_viewdirs, d_filter // 2)
+      self.output = nn.Linear(d_filter // 2, 3)
+    else:
+      # 如果不使用试图方向，则简单输出
+      self.output = nn.Linear(d_filter, 4)
+  
+  def forward(
+    self,
+    x: torch.Tensor,
+    viewdirs: Optional[torch.Tensor] = None
+  ) -> torch.Tensor:
+    r"""
+    带有视图方向的前向传播
+    """
+
+    # 判断是否设置视图方向
+    if self.d_viewdirs is None and viewdirs is not None:
+      raise ValueError('Cannot input x_direction if d_viewdirs was not given.')
+
+    # 运行bottleneck层之前的网络层
+    x_input = x
+    for i, layer in enumerate(self.layers):
+      x = self.act(layer(x))
+      if i in self.skip:
+        x = torch.cat([x, x_input], dim=-1)
+
+    # 运行 bottleneck
+    if self.d_viewdirs is not None:
+      # Split alpha from network output
+      alpha = self.alpha_out(x)
+
+      # 结果传入到rgb过滤器
+      x = self.rgb_filters(x)
+      x = torch.concat([x, viewdirs], dim=-1)
+      x = self.act(self.branch(x))
+      x = self.output(x)
+
+      # 拼接alpha一起作为输出
+      x = torch.concat([x, alpha], dim=-1)
+    else:
+      # 不拼接，简单输出
+      x = self.output(x)
+    return x

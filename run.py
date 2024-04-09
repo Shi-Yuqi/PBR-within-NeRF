@@ -86,12 +86,12 @@ from photoextractor import PhotoExtractor
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-loaded_matrices = np.load('D:\\code\\data_PBR_within_NeRF\\matrix\\matrices.npy')
+# loaded_matrices = np.load('D:\\code\\data_PBR_within_NeRF\\matrix\\matrices.npy')
 # loaded_matrices = np.load('D:\\code\\data_PBR_within_NeRF\\matrix_trans\\matrices.npy')
-# loaded_matrices = np.load('E:\\matrix\\matrices.npy')
+loaded_matrices = np.load('E:\\matrix\\matrices.npy')
 
-path_photo = 'D:\\code\\data_PBR_within_NeRF\\within_texture'
-# path_photo = 'E:\\blender\\within_texture'
+# path_photo = 'D:\\code\\data_PBR_within_NeRF\\within_texture'
+path_photo = 'E:\\blender\\within_texture'
 data = PhotoExtractor(path_photo, 20)
 images = np.array(data.extract_photos())  # 图像数据
 
